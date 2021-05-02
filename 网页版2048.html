@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>网页版2048</title>
+	<link rel="stylesheet" href="2048css/2048.css">
+	<!-- <script rel="stylesheet" href="./2048javascript/2048javascript.js"> -->
+	<link rel="shortcut icon" href="./Icon/favicon.ico">
+	<script src="2048javascript/support.js"></script>
+	<script src="2048javascript/2048javascript.js"> </script>
+	<script src="2048javascript/game.js"></script>
+	<style>
+		#gameover{
+    		width: 460px;
+    		height: 460px;
+    		padding: 20px;
+    		background-color: #9f8b77;
+    		text-align: center;
+    		border-radius: 6px;
+    		opacity: 0.7;
+    		position: absolute;
+    		display: none;
+		}
+		#gameover  p{
+    		font-size:60px;
+    		font-weight: bolder;
+    		color: red;
+    		margin-top: 150px;
+		}
+
+		#gameover span{
+    		font-size: 48px;
+    		font-weight: bolder;
+		}
+		#regretbox{
+			position: absolute;
+			top: 300px;
+			left: 20%;
+		}
+
+		#regret{
+			width: 100px;
+			height: 40px;
+			background-color: rgb(247, 175, 187);
+			position: absolute;
+			text-align: center;
+			border-radius: 6px;
+			padding-top:10px;
+			font-size:large;
+			font-weight: bolder;
+			color:white;
+			display: block;
+		}
+		#regret:hover{
+			background-color: pink;
+		}
+		#chance{
+			position:absolute;
+			top:60px;
+			width: 150px;
+			font-weight: bolder;
+			color:rgb(68, 65, 65);
+		}
+
+		#ranklist{
+			width: 300px;
+			height: 600px;
+			/* 	border-style: solid; */
+			border-radius: 8px;
+			position: absolute;
+			top: 100px;
+			right: 7%;
+			text-align: center;
+			background-color: #9f8b7783;
+			box-shadow: 5px 5px 10px 2px #999 inset;
+		}
+
+		.historyscore{
+			font-size: 30px;
+			font-weight: bolder;
+			
+		}
+		h1{
+			margin-top: 10px;
+		}
+
+		#ad{
+			border-style: solid;	
+    		width: 100px;
+    		height: 300px;
+			position: absolute;
+			top: 200px;
+			left: 100px;
+			font-size: larger;
+			z-index: 999;
+			background-color: bisque;
+			border-width: 2px;
+			border-color: yellow;
+			animation: adborderflash 1s linear infinite; 
+
+		}
+		#ad img{
+			width: 100px;
+			height: 100px;
+		}
+		#adbtn{
+			width: 20px;
+			height: 20px;
+			position: absolute;
+			right: 0px;
+			background-color: rgba(0,0,0,0.5);
+			text-align: right;
+			/* padding-top: 5px; */
+			/* padding-bottom: 30px; */
+			color:white;
+			border-radius: 2px;
+			font-size: large;
+			/* display: block; */
+		}
+
+		#adbtn span{
+			position: absolute;
+			left: 3px;
+			top: -7px;
+			font-size: larger;
+		}
+
+		#adtext{
+			position: absolute;
+			top: 20px;
+		}
+
+		@keyframes adborderflash
+		{
+			0%{
+				border-color:red;
+			}
+			50%{
+				border-color:yellow;
+			}
+			100%{
+				border-color:red;
+			}
+		}
+	</style>
+	<!-- 加在这里是因为如果加载在css文件里样式好像加载不出来 -->
+</head>
+<body>
+	<header>
+		<h1>网页版2048</h1>
+		<a id="newgamebutton" href="javascript:;">New Game</a>
+		<p>Score:<span id="score">0</span></p>
+	</header>
+	<div id="grid_container">
+		<!-- <div class="grid_cell"></div>
+		<div class="number_cell"></div> -->
+	</div>
+	<div id="gameover">
+		<p>Game Over</p>
+		<span>得分：<span id="finalscore"></span></span>
+	</div>
+	<div id="regretbox">
+		<a href="javascript:;" id="regret">悔棋</a>
+		<br />
+		<span id="chance">次数还剩：2次</span>
+	</div>
+
+	<div id="ranklist">
+		<h1>历史排行榜</h1>
+	</div>
+	
+	<div id="ad">
+		<a href="javascript:;" id="adbtn"><span>×</span></a>
+		<span id="adtext"><b>slj贱卖！</b><br /><br />3块2毛一斤<br />预购从速！<br/><br />
+			电话：123456<img src="doge.jpg"/></span>
+	</div>
+	<!-- 不知道为什么其它文件获取不到节点所以只能写在这里了... -->
+	<script>
+		var gameover = document.getElementById("gameover");
+		// console.log(gameover);
+		var chancespan = document.querySelector("#chance");
+		var regret2 = document.getElementById("regret");
+		// console.log(chancespan);
+		var ranklist = document.getElementById("ranklist");
+    	// console.log(ranklist);
+		var adbtn = document.getElementById("adbtn");
+		// console.log(adbtn);
+		// 记录游玩次数，暂时没用...
+		var playtimes = 0;
+
+		const MAX_RANK_MEMORY = 15;
+		var historyScore = new Array(MAX_RANK_MEMORY);//定义一个记录历史分数的函数
+
+		for(var i=0; i<historyScore.length; i++){
+        	historyScore[i] = 0;
+    	}
+	function showHistoryRankList(){//游戏结束时调用排行榜函数，先将里面除h2元素的其它元素全部清空，然后做排序，
+		var temp;
+		// 排序
+		bubbleSort();
+		removeAllHscore();
+		var h1 = document.createElement("h1");
+		h1.innerText = "历史排行榜";
+		ranklist.appendChild(h1);
+		var rank = 0;
+    	for(var i=0; i<historyScore.length; i++){
+			if(historyScore[i]>0){
+				var hscore  = document.createElement("span");
+				var br = document.createElement("br");
+            	hscore.setAttribute("class","historyscore");
+            	ranklist.appendChild(hscore);
+				ranklist.appendChild(br);
+				hscore.innerText = historyScore[i];
+				hscore.style.top = 50 + 10*i + "px";
+				rank++;
+			}       
+    	}
+    	// console.log(ranklist);
+	}
+
+	function removeAllHscore(){
+    	var nodes = ranklist.childNodes;
+    	for(var i = nodes.length-1; i>=0; i--){
+        	ranklist.removeChild(nodes[i]);
+    	}
+	}
+
+	function bubbleSort(){
+		for( var i=0; i<historyScore.length-1; i++){
+			for(var j=0; j<historyScore.length-i-1; j++){
+				if(historyScore[j]<historyScore[j+1]){
+					temp = historyScore[j];
+					historyScore[j] = historyScore[j+1];
+					historyScore[j+1] = temp;
+				}
+			}
+		}
+	}
+	
+	function findSmallestNumIfBiggerReplace(Arr, num){
+		var minloc = 0;
+		//找出最小数的位置
+		for(var i=0; i<Arr.length; i++){
+			if(Arr[minloc] > Arr[i]){
+				minloc = i;
+			}
+		}
+		// 如果最小的数小于传入的数那么替换
+		if(Arr[minloc] < num){
+			Arr[minloc] = num;
+		}
+	}
+	// historyRankList();
+	adbtn.onclick= function() {
+		var ad = document.getElementById("ad");
+		// alert("这么棒的广告怎么能关呢？");
+		console.log("为什么你要关掉这么棒的广告?");
+		ad.style.display = "none";
+	}
+	</script>
+
+
+<!-- // //判断数组是否存满
+	// function isArrFull(Arr){
+	// 	for(var i=0; i<Arr.length; i++){
+	// 		if(Arr[i] == 0){
+	// 			return false;
+	// 		}
+	// 	}
+	// 	return true;
+	// } -->
+
+
+
+
+
+
+	<!-- <script>
+		//游戏初始分数
+		var socre = 0;
+
+		//为了和4*4的数字格对应，需要用二维数组存储数据
+		var numberArr = new Array();
+
+
+		window.onload = function(){
+			//开始新游戏
+			newgame();
+			document.querySelector("#newgamebutton").onclick = function(){
+				newgame();
+			}
+		}
+
+		//newgam函数
+		function newgame(){
+			// 初始化棋盘区域,把grid_container所有元素删除；
+			removeAll();
+			//1.初始化游戏数据
+			initGameData();
+			// // 2.初始化棋盘格
+			initGridCell();
+			// 3.初始化数字格
+			initNumberCell();
+			// 4.在随机位置生成随机数字*2
+			getRandNumber();
+			getRandNumber();
+		}
+
+		function removeAll(){
+			var grid_container = document.querySelector("#grid_container");
+			var nodes = grid_container.childNodes;
+			for(var i = nodes.length-1; i>=0; i--){
+				grid_container.removeChild(nodes[i]);
+			}
+		}
+
+		// 初始化游戏数据
+		function initGameData(){
+			for(var i=0; i<4; i++){
+				numberArr[i] = new Array();
+				for(var j=0; j<4; j++){
+					numberArr[i][j] = 0;
+					// console.log(numberArr[i][j]);
+				}
+			}
+		}
+
+ 		// 初始化棋盘格
+		function initGridCell(){
+			var grid_container = document.querySelector("#grid_container");
+			// console.log(grid_container);
+			for(var i=0; i<4; i++){
+				for(var j=0; j<4; j++){
+					var grid_cell  = document.createElement("div");
+					grid_cell.setAttribute("class","grid_cell");//???
+					grid_container.appendChild(grid_cell);
+					grid_cell.style.top = 20 + 120*i + "px";
+					grid_cell.style.left = 20 + 120*j + "px";
+				}
+			}
+		}
+
+		// 初始化数字格
+		function initNumberCell(){
+			var grid_container = document.querySelector("#grid_container");
+			for(var i=0; i<4; i++){
+				for(var j=0; j<4; j++){
+					var number_cell  = document.createElement("div");
+					number_cell.setAttribute("class","number_cell");//???
+					number_cell.setAttribute("id","number_cell-" + i +"-" + j);
+					grid_container.appendChild(number_cell);
+					number_cell.style.top = 20 + 120*i + "px";
+					number_cell.style.left = 20 + 120*j + "px";
+
+					// number_cell.innerText  =numberArr[i][j];
+					// showNumber();
+				}
+			}
+		}
+
+		// 将游戏数据显示到数字格上
+		function showNumber(){
+			for(var i=0; i<4; i++){
+				for(var j=0; j<4; j++){
+					var number_cell = document.querySelector("#number_cell-" + i +"-" + j);
+					// console.log(number_cell);
+					if(numberArr[i][j] == 0){
+						number_cell.style.display = "none";
+					}
+					else{
+						number_cell.style.display = "block";
+						number_cell.innerText = numberArr[i][j];
+						number_cell.style.background = setBgColor(numberArr[i][j]);
+						number_cell.style.color  =setColor(numberArr[i][j]);
+						number_cell.style.fontSize  = setFontSize(numberArr[i][j]);
+						}
+					}
+				}
+			}
+// 设置数子格的背景颜色	,游戏支持函数，设置成单独的js代码
+			function setBgColor(number){
+				switch(number){
+					case 2: 	return "#eee4da";	break;
+					case 4: 	return "#ede0c8";	break;
+					case 8: 	return "#f2b179";	break;
+					case 16: 	return "#f59563";	break;
+					case 32: 	return "#f67c5f";	break;
+					case 64: 	return "#f65e3b";	break;
+					case 128: 	return "#edcf72";	break;
+					case 256: 	return "#edcc61";	break;
+					case 512: 	return "#9c0";		break;
+					case 1024: 	return "#33b5e5";	break;
+					case 2048: 	return "#09c";		break;
+					case 4096: 	return "#a6c";		break;
+					case 8192: 	return "#93c";		break;
+					case 16384: return "#F55";		break;
+
+				}
+			}
+// 设置数字格的字体颜色
+			function setColor(number){
+				if(number<=4){
+					return "#776e65";
+				}else{
+					return "#fff";
+				}
+			}
+// 设置字体大小
+			function setFontSize(number){
+				if(number >= 16384){
+					return "32px";
+				}else if(number >= 1024){
+					return "40px";
+				}else{
+					return "54px";
+				}	
+			}
+
+			// 在随机位置生成随机数字
+			function getRandNumber(){
+				// 必须存在空位置，才能去生成随机位置
+				// 判断是否存在空位置
+				if(hasEmptyPosition()){
+
+					// 随机位置
+						var randx = parseInt(Math.random()*4);
+						var randy = parseInt(Math.random()*4);
+						while(true){
+							// 判断随机位置是否有效
+							if(numberArr[randx][randy] == 0){
+							// 随机数字2或4
+							var randNumber = Math.random()<0.5 ? 2: 4;
+							numberArr[randx][randy] = randNumber;
+							break;
+							}else{
+								randx = parseInt(Math.random()*4);
+								randy = parseInt(Math.random()*4);
+							}
+						}
+					}
+					showNumber();
+			}
+
+			function hasEmptyPosition() {
+				for(var i=0; i<4; i++){
+					for(var j=0; j<4; j++){
+						if(numberArr[i][j] == 0){
+							return true;
+						}
+					}
+				}
+				return false;				
+			}
+	</script> -->
+</body>
+</html>
+
+
